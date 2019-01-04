@@ -20,13 +20,14 @@ let presences = {};
 let userPresenceTopic = '', userConversationsTopic = '';
 let webSocket = null;
 let me, notificationChannel;
+let currentConversationId, currentCommunicationId;
 
 $(document).ready(() => {
   // Authenticate with PureCloud
   client.loginImplicitGrant(clientId, redirectUri)
     .then(() => {
       console.log('Logged in');
-
+      console.log(client);
       // Get presences
       return presenceApi.getPresencedefinitions({ pageSize: 100 });
     })
@@ -107,6 +108,7 @@ function handleNotification(message) {
   } else if (notification.topicName.toLowerCase() == userConversationsTopic.toLowerCase()) {
     // User Conversations Notification
     console.debug('User Conversations Notification: ', notification);
+    console.debug('User Conversations Notification (stringified): ', JSON.stringify(notification));
 
     // Get agent participant
     $.each(notification.eventBody.participants, (i, participant) => {
@@ -118,8 +120,13 @@ function handleNotification(message) {
           conversationsApi.patchConversationsChatParticipant(conversationId, participantId, { state: "CONNECTED" })
             .then(() => {
               console.log(`Conversation ${conversationId} is connected`);
+              currentConversationId = conversationId;
+              currentCommunicationId = participant.chats[0].id;
             }).catch(console.error);
         }
+      }
+      else if (participant.purpose == "customer" && !participant.endTime) {
+        currentCommunicationId = participant.chats[0].id;
       }
     });
     return;
@@ -129,6 +136,23 @@ function handleNotification(message) {
 
 }
 
+$('#sendmessage').click((event) => {
+  event.preventDefault();
+  if (!$("#agentmessage").val()) { return; }
+  sendMessage($('#agentmessage').val());
+  $('#agentmessage').val('');
+});
+
 function sendMessage(message) {
-  // Which function to call?
+  $.ajax({
+    method: "POST",
+    url: `${client.basePath}/api/v2/conversations/chats/${currentConversationId}/communications/${currentCommunicationId}/messages`,
+    beforeSend: function (xhr) { xhr.setRequestHeader("Authorization", "bearer " + client.authData.accessToken); },
+    data: {
+      body: message
+    },
+    success: function (data) {
+      console.log(data);
+    }
+  });
 }
