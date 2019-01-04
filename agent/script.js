@@ -144,13 +144,18 @@ $('#sendmessage').click((event) => {
 });
 
 function sendMessage(message) {
+  console.log("Sending " + message);
   $.ajax({
     method: "POST",
     url: `${client.basePath}/api/v2/conversations/chats/${currentConversationId}/communications/${currentCommunicationId}/messages`,
-    beforeSend: function (xhr) { xhr.setRequestHeader("Authorization", "bearer " + client.authData.accessToken); },
-    data: {
-      body: message
+    contentType: "application/json",
+    dataType: "json",
+    beforeSend: function (xhr) {
+      xhr.setRequestHeader("Authorization", "bearer " + client.authData.accessToken);
     },
+    data: JSON.stringify({
+      body: message
+    }),
     success: function (data) {
       console.log(data);
     }
